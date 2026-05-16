@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calculadora de IMC</title>
+  <style>
+    :root{
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --accent: #3b82f6;
+      --muted: #6b7280;
+      --success: #10b981;
+      --danger: #ef4444;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    /* tema escuro (aplicado com a classe .dark no body) */
+    body.dark{
+      --bg: #0b1020;
+      --card: #0f1724;
+      --accent: #60a5fa;
+      --muted: #9ca3af;
+      --success: #34d399;
+      --danger: #f87171;
+      color: #e6eef8;
+    }
+
+    *{box-sizing: border-box}
+    body{
+      margin:0;
+      padding:40px 16px;
+      background: linear-gradient(180deg,#eef2ff 0%, var(--bg) 100%);
+      color:#111827;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      transition: background-color .28s ease, color .28s ease;
+    }
+
+    .card{
+      background:var(--card);
+      max-width:520px;
+      width:100%;
+      padding:24px;
+      border-radius:12px;
+      box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+      border: 1px solid rgba(15,23,42,0.04);
+      transition: background-color .28s ease, border-color .28s ease, box-shadow .28s ease;
+    }
+
+    .header-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+    .theme-toggle{background:transparent;border:1px solid rgba(15,23,42,0.06);padding:6px 10px;border-radius:999px;cursor:pointer;font-size:16px}
+    body.dark .theme-toggle{border-color:rgba(255,255,255,0.06);background:rgba(255,255,255,0.02)}
+  .theme-toggle .icon{display:inline-flex;align-items:center;justify-content:center;margin-right:8px;transition:transform .18s ease, opacity .18s ease}
+  .theme-toggle .icon svg{display:block}
+  .theme-toggle .icon.moon{opacity:0;transform:translateY(-4px)}
+  body.dark .theme-toggle .icon.moon{opacity:1;transform:translateY(0)}
+  body.dark .theme-toggle .icon.sun{opacity:0;transform:translateY(-4px)}
+  .theme-toggle .theme-label{vertical-align:middle}
+
+  h1{margin:0;font-size:20px}
+  p.lead{margin:0 0 18px 0;color:var(--muted);font-size:14px}
+
+    form{display:grid;gap:12px}
+    label{font-size:13px;color:#374151}
+    .row{display:flex;gap:12px}
+
+    input[type="number"]{
+      width:100%;
+      padding:10px 12px;
+      border-radius:8px;
+      border:1px solid #e6e9ef;
+      font-size:15px;
+      outline:none;
+      background:transparent;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    input[type="number"]:focus{box-shadow:0 0 0 4px rgba(59,130,246,0.08);border-color:var(--accent)}
+  input.invalid{border-color:var(--danger);box-shadow:0 0 0 4px rgba(239,68,68,0.06)}
+  .error{color:var(--danger);font-size:13px;margin-top:6px}
+
+    .actions{display:flex;gap:8px;margin-top:6px}
+    button{
+      padding:10px 14px;border-radius:8px;border:0;cursor:pointer;font-weight:600
+    }
+    button.primary{background:var(--accent);color:white}
+    button.ghost{background:transparent;border:1px solid #e6e9ef;color:#374151}
+
+    .result{
+      margin-top:18px;padding:14px;border-radius:8px;background:#f8fafc;border:1px solid #eef2ff;
+      display:flex;align-items:center;gap:12px;justify-content:space-between
+      ;transition: background-color .22s ease, border-color .22s ease, color .22s ease;
+    }
+    .bmi{font-size:20px;font-weight:700}
+    .cat{font-size:14px;color:var(--muted)}
+
+    .note{margin-top:10px;font-size:13px;color:var(--muted)}
+
+    .chip{padding:6px 10px;border-radius:999px;font-weight:600;font-size:13px}
+  .chip{transition: background-color .22s ease, color .22s ease, border-color .22s ease}
+
+    /* classification colors */
+    .underweight{background:#fffbeb;color:#92400e;border:1px solid #fef3c7}
+    .normal{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
+    .overweight{background:#fff7ed;color:#92400e;border:1px solid #ffedd5}
+    .obese{background:#fff1f2;color:#7f1d1d;border:1px solid #ffdde0}
+
+    footer{margin-top:14px;text-align:center;font-size:12px;color:var(--muted)}
+
+    @media (max-width:520px){body{padding:20px} .card{padding:16px}}
+
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <div class="header-row">
+      <div>
+        <h1>Calculadora de IMC</h1>
+        <p class="lead">Calcule seu Índice de Massa Corporal (IMC). Insira seu peso em kg e sua altura em centímetros.</p>
+      </div>
+      <div>
+        <button id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Alternar tema">
+          <span class="icon sun" aria-hidden="true">
+            <!-- sol -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5 5l-1.5-1.5M20.5 20.5 19 19M19 5l1.5-1.5M5 19l-1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </span>
+          <span class="icon moon" aria-hidden="true">
+            <!-- lua -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="theme-label">Tema escuro</span>
+        </button>
+      </div>
+    </div>
+
+    <form id="imcForm" onsubmit="return false;" aria-label="Formulário calculadora de IMC">
+      <div>
+        <label for="peso">Peso (kg)</label>
+        <input id="peso" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Ex: 70.5" required aria-describedby="pesoError" />
+        <div id="pesoError" class="error" role="alert" aria-live="assertive" style="display:none"></div>
+      </div>
+
+      <div>
+        <label for="altura">Altura (cm)</label>
+        <input id="altura" type="number" inputmode="numeric" min="0" step="0.1" placeholder="Ex: 170" required aria-describedby="alturaError" />
+        <div id="alturaError" class="error" role="alert" aria-live="assertive" style="display:none"></div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="primary" id="calcular">Calcular</button>
+        <button type="button" class="ghost" id="limpar">Limpar</button>
+      </div>
+
+      <div id="saida" aria-live="polite" style="display:none" class="result">
+        <div>
+          <div class="bmi" id="bmiValue">0.0</div>
+          <div class="cat" id="bmiCat">—</div>
+        </div>
+        <div id="bmiChip" class="chip normal">—</div>
+      </div>
+
+      <div class="note">Classificação baseada em valores padrão: <strong>baixo peso</strong> (&lt;18.5), <strong>normal</strong> (18.5–24.9), <strong>sobrepeso</strong> (25–29.9), <strong>obesidade</strong> (≥30).</div>
+
+    </form>
+
+    <footer>Feito com HTML, CSS e JavaScript puro — sem frameworks</footer>
+  </main>
+
+  <script>
+    (function(){
+        // tema: inicialização e alternância (localStorage + prefers-color-scheme)
+        const themeToggle = document.getElementById('themeToggle');
+        const THEME_KEY = 'imc_theme';
+
+        function applyTheme(name){
+          const label = themeToggle.querySelector('.theme-label');
+          if(name === 'dark'){
+            document.body.classList.add('dark');
+            label.textContent = 'Tema claro';
+            themeToggle.setAttribute('aria-pressed','true');
+          } else {
+            document.body.classList.remove('dark');
+            label.textContent = 'Tema escuro';
+            themeToggle.setAttribute('aria-pressed','false');
+          }
+        }
+
+        function getPreferredTheme(){
+          const saved = localStorage.getItem(THEME_KEY);
+          if(saved === 'dark' || saved === 'light') return saved;
+          // respeitar preferência do sistema
+          return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        themeToggle.addEventListener('click', () => {
+          const next = document.body.classList.contains('dark') ? 'light' : 'dark';
+          applyTheme(next);
+          localStorage.setItem(THEME_KEY, next);
+        });
+
+        // aplicar no carregamento
+        applyTheme(getPreferredTheme());
+
+        // salvar/ler últimas entradas (peso/altura)
+        const LAST_KEY = 'imc_last';
+        function saveLast(peso, altura){
+          try{ localStorage.setItem(LAST_KEY, JSON.stringify({peso, altura})); }catch(e){}
+        }
+        function loadLast(){
+          try{ const v = localStorage.getItem(LAST_KEY); if(!v) return null; return JSON.parse(v); }catch(e){ return null }
+        }
+        const last = loadLast();
+        if(last){ if(last.peso) pesoEl.value = last.peso; if(last.altura) alturaEl.value = last.altura; }
+
+      const pesoEl = document.getElementById('peso');
+      const alturaEl = document.getElementById('altura');
+      const btnCalcular = document.getElementById('calcular');
+      const btnLimpar = document.getElementById('limpar');
+      const saida = document.getElementById('saida');
+      const bmiValue = document.getElementById('bmiValue');
+      const bmiCat = document.getElementById('bmiCat');
+      const bmiChip = document.getElementById('bmiChip');
+        const pesoError = document.getElementById('pesoError');
+        const alturaError = document.getElementById('alturaError');
+
+      function formatNumber(n){
+        return Number(n).toFixed(1).replace('.',',');
+      }
+
+      function showError(el, msgEl, msg){
+        el.classList.add('invalid');
+        msgEl.textContent = msg;
+        msgEl.style.display = 'block';
+      }
+
+      function clearError(el, msgEl){
+        el.classList.remove('invalid');
+        msgEl.textContent = '';
+        msgEl.style.display = 'none';
+      }
+
+      function classificar(imc){
+        if(imc < 18.5) return {label: 'Baixo peso', className: 'underweight'};
+        if(imc < 25) return {label: 'Normal', className: 'normal'};
+        if(imc < 30) return {label: 'Sobrepeso', className: 'overweight'};
+        return {label: 'Obesidade', className: 'obese'};
+      }
+
+      function calcular(){
+        // limpar erros anteriores
+        clearError(pesoEl, pesoError);
+        clearError(alturaEl, alturaError);
+
+        const peso = parseFloat((pesoEl.value || '').toString().replace(',','.'));
+        const alturaCm = parseFloat((alturaEl.value || '').toString().replace(',','.'));
+
+        // validação inline
+        let firstInvalid = null;
+        if(!isFinite(peso) || peso <= 0){
+          showError(pesoEl, pesoError, 'Informe um peso válido (maior que 0).');
+          firstInvalid = firstInvalid || pesoEl;
+        }
+        if(!isFinite(alturaCm) || alturaCm <= 0){
+          showError(alturaEl, alturaError, 'Informe uma altura válida em centímetros (maior que 0).');
+          firstInvalid = firstInvalid || alturaEl;
+        }
+        if(firstInvalid){
+          firstInvalid.focus();
+          return;
+        }
+
+        const alturaM = alturaCm / 100;
+        const imc = peso / (alturaM * alturaM);
+
+  const cls = classificar(imc);
+
+        bmiValue.textContent = formatNumber(imc);
+        bmiCat.textContent = cls.label;
+
+        // atualizar chip com cor
+        bmiChip.textContent = cls.label;
+        bmiChip.className = 'chip ' + cls.className;
+
+        saida.style.display = 'flex';
+        // salvar últimas entradas
+        saveLast(pesoEl.value, alturaEl.value);
+      }
+
+      btnCalcular.addEventListener('click', calcular);
+      btnLimpar.addEventListener('click', () => {
+        pesoEl.value = '';
+        alturaEl.value = '';
+        // limpar saída e erros
+        saida.style.display = 'none';
+        bmiChip.className = 'chip normal';
+        bmiValue.textContent = '0.0';
+        bmiCat.textContent = '—';
+        clearError(pesoEl, pesoError);
+        clearError(alturaEl, alturaError);
+        try{ localStorage.removeItem(LAST_KEY); }catch(e){}
+        pesoEl.focus();
+      });
+
+      // permitir Enter para calcular
+      [pesoEl, alturaEl].forEach(el => {
+        el.addEventListener('keydown', (e) => {
+          if(e.key === 'Enter'){
+            e.preventDefault();
+            calcular();
+          }
+        });
+      });
+
+    })();
+  </script>
+</body>
+</html>
