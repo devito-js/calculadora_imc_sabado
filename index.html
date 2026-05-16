@@ -103,6 +103,18 @@
     .chip{padding:6px 10px;border-radius:999px;font-weight:600;font-size:13px}
   .chip{transition: background-color .22s ease, color .22s ease, border-color .22s ease}
 
+  /* histórico */
+  .history{margin-top:18px}
+  .history-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+  .history-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;padding-right:6px}
+  .history-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border-radius:8px;background:rgba(2,6,23,0.03);border:1px solid rgba(15,23,42,0.04)}
+  .history-meta{font-size:13px;color:var(--muted)}
+  .history-value{font-weight:700}
+  .history-actions{display:flex;gap:8px}
+  .small-btn{padding:6px 8px;border-radius:8px;border:0;cursor:pointer;font-size:13px}
+  .small-btn.ghost{background:transparent;border:1px solid #e6e9ef}
+  body.dark .history-item{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.03)}
+
     /* classification colors */
     .underweight{background:#fffbeb;color:#92400e;border:1px solid #fef3c7}
     .normal{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
@@ -168,6 +180,16 @@
         <div id="bmiChip" class="chip normal">—</div>
       </div>
 
+      <section class="history" aria-label="Histórico de resultados">
+        <div class="history-header">
+          <strong>Histórico</strong>
+          <div>
+            <button id="clearHistory" type="button" class="small-btn ghost">Limpar histórico</button>
+          </div>
+        </div>
+        <div id="historyList" class="history-list" aria-live="polite"></div>
+      </section>
+
       <div class="note">Classificação baseada em valores padrão: <strong>baixo peso</strong> (&lt;18.5), <strong>normal</strong> (18.5–24.9), <strong>sobrepeso</strong> (25–29.9), <strong>obesidade</strong> (≥30).</div>
 
     </form>
@@ -210,16 +232,7 @@
         // aplicar no carregamento
         applyTheme(getPreferredTheme());
 
-        // salvar/ler últimas entradas (peso/altura)
-        const LAST_KEY = 'imc_last';
-        function saveLast(peso, altura){
-          try{ localStorage.setItem(LAST_KEY, JSON.stringify({peso, altura})); }catch(e){}
-        }
-        function loadLast(){
-          try{ const v = localStorage.getItem(LAST_KEY); if(!v) return null; return JSON.parse(v); }catch(e){ return null }
-        }
-        const last = loadLast();
-        if(last){ if(last.peso) pesoEl.value = last.peso; if(last.altura) alturaEl.value = last.altura; }
+        /* últimas entradas (peso/altura) e histórico serão inicializados após obter os elementos do DOM */
 
       const pesoEl = document.getElementById('peso');
       const alturaEl = document.getElementById('altura');
@@ -231,6 +244,79 @@
       const bmiChip = document.getElementById('bmiChip');
         const pesoError = document.getElementById('pesoError');
         const alturaError = document.getElementById('alturaError');
+        const historyListEl = document.getElementById('historyList');
+        const clearHistoryBtn = document.getElementById('clearHistory');
+
+        // salvar/ler últimas entradas (peso/altura)
+        const LAST_KEY = 'imc_last';
+        function saveLast(peso, altura){
+          try{ localStorage.setItem(LAST_KEY, JSON.stringify({peso, altura})); }catch(e){}
+        }
+        function loadLast(){
+          try{ const v = localStorage.getItem(LAST_KEY); if(!v) return null; return JSON.parse(v); }catch(e){ return null }
+        }
+        const last = loadLast();
+        if(last){ if(last.peso) pesoEl.value = last.peso; if(last.altura) alturaEl.value = last.altura; }
+
+        // histórico de cálculos
+        const HISTORY_KEY = 'imc_history';
+        function loadHistory(){
+          try{ const v = localStorage.getItem(HISTORY_KEY); if(!v) return []; return JSON.parse(v); }catch(e){ return []; }
+        }
+        function saveHistory(items){
+          try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(items)); }catch(e){}
+        }
+        function addHistoryEntry(entry){
+          const items = loadHistory();
+          items.unshift(entry); // mais recente primeiro
+          if(items.length > 50) items.length = 50;
+          saveHistory(items);
+          renderHistory();
+        }
+        function removeHistoryItem(index){
+          const items = loadHistory();
+          items.splice(index,1);
+          saveHistory(items);
+          renderHistory();
+        }
+        function clearHistory(){
+          try{ localStorage.removeItem(HISTORY_KEY); }catch(e){}
+          renderHistory();
+        }
+        function renderHistory(){
+          const items = loadHistory();
+          historyListEl.innerHTML = '';
+          if(items.length === 0){
+            historyListEl.innerHTML = '<div class="history-meta">Sem histórico ainda.</div>';
+            return;
+          }
+          items.forEach((it, idx) => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            const left = document.createElement('div');
+            left.innerHTML = `<div class="history-value">${it.imc}</div><div class="history-meta">Peso: ${it.peso} kg · Alt: ${it.altura} cm · ${it.when}</div>`;
+            const actions = document.createElement('div');
+            actions.className = 'history-actions';
+            const btnDel = document.createElement('button');
+            btnDel.className = 'small-btn ghost';
+            btnDel.textContent = 'Remover';
+            btnDel.addEventListener('click', ()=> removeHistoryItem(idx));
+            const btnUse = document.createElement('button');
+            btnUse.className = 'small-btn';
+            btnUse.textContent = 'Usar';
+            btnUse.addEventListener('click', ()=>{
+              pesoEl.value = it.peso; alturaEl.value = it.altura; calcular();
+            });
+            actions.appendChild(btnUse);
+            actions.appendChild(btnDel);
+            div.appendChild(left);
+            div.appendChild(actions);
+            historyListEl.appendChild(div);
+          });
+        }
+        clearHistoryBtn.addEventListener('click', () => { if(confirm('Limpar todo o histórico?')) clearHistory(); });
+        // render inicial do histórico
+        renderHistory();
 
       function formatNumber(n){
         return Number(n).toFixed(1).replace('.',',');
@@ -293,6 +379,16 @@
         saida.style.display = 'flex';
         // salvar últimas entradas
         saveLast(pesoEl.value, alturaEl.value);
+        // salvar no histórico
+        try{
+          const entry = {
+            imc: formatNumber(imc),
+            peso: pesoEl.value,
+            altura: alturaEl.value,
+            when: new Date().toLocaleString('pt-BR')
+          };
+          addHistoryEntry(entry);
+        }catch(e){}
       }
 
       btnCalcular.addEventListener('click', calcular);
